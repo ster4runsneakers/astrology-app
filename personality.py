@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from natal import BirthProfile, NatalChart, PlanetPosition
+from narrative_el import build_rich_summary
 from voice_el import VOICE_DISCLAIMER_EL, warm_wrap
 from zodiac import ZodiacSignId, get_zodiac_by_id
 
@@ -472,63 +473,8 @@ def _blend_summary(
     asc_id: Optional[ZodiacSignId],
     name: str,
 ) -> str:
-    sun = get_zodiac_by_id(sun_id)
-    moon = get_zodiac_by_id(moon_id)
-    who = f"{name}, " if name else ""
+    return build_rich_summary(sun_id, moon_id, asc_id, name)
 
-    p1 = (
-        f"{who}το προφίλ σου συνδυάζει Ήλιο {_sign_phrase(sun_id)} "
-        f"({sun.element_el}, {sun.modality_el}) με Σελήνη {_sign_phrase(moon_id)} "
-        f"({moon.element_el}). "
-        f"Ο Ήλιος περιγράφει τον πυρήνα της ταυτότητας· η Σελήνη, τον "
-        f"ρυθμό των συναισθημάτων και της ανάγκης για ασφάλεια."
-    )
-
-    se, me = ELEMENT_OF[sun_id], ELEMENT_OF[moon_id]
-    tension = _ELEMENT_TENSION.get((se, me), "")
-    p2 = tension if tension else (
-        f"Η αλληλεπίδραση {ELEMENT_EL[se]}–{ELEMENT_EL[me]} διαμορφώνει "
-        f"τον τρόπο που εκφράζεις τον εαυτό σου και που ζητάς φροντίδα."
-    )
-
-    if asc_id:
-        asc = get_zodiac_by_id(asc_id)
-        p3 = (
-            f"Με Ωροσκόπο {_sign_phrase(asc_id)}, η πρώτη εντύπωση "
-            f"που αφήνεις έχει χαρακτήρα στοιχείου **{asc.element_el}** "
-            f"({asc.modality_el})· οι άλλοι σε συναντούν μέσα από αυτό το "
-            f"«προσκήνιο», ενώ ο Ήλιος και η Σελήνη δουλεύουν πιο εσωτερικά."
-        )
-    else:
-        p3 = (
-            "Χωρίς ακριβή ώρα γέννησης δεν υπολογίζεται Ωροσκόπος· "
-            "η ανάλυση εστιάζει σε Ήλιο, Σελήνη και προσωπικούς πλανήτες. "
-            "Με ώρα, το προφίλ γίνεται σαφέστερο ως προς το πώς σε βλέπουν."
-        )
-
-    # Short closing coherence line
-    if sun_id == moon_id:
-        p4 = (
-            f"Ήλιος και Σελήνη στο ίδιο ζώδιο ({sun.name_el}) ενισχύουν "
-            f"ένα συνεκτικό, έντονο μοτίβο — οι άλλοι σε «διαβάζουν» σχετικά εύκολα."
-        )
-    elif se == me:
-        p4 = (
-            f"Και οι δύο φωστήρες στο στοιχείο **{ELEMENT_EL[se]}** "
-            f"δίνουν συνοχή στον χαρακτήρα, με παραλλαγές ύφους ανάμεσα σε "
-            f"ταυτότητα και συναίσθημα."
-        )
-    else:
-        p4 = (
-            "Η ένταση ανάμεσα σε ταυτότητα και συναίσθημα δεν είναι αδυναμία· "
-            "είναι υλικό για ωρίμανση, όταν αναγνωρίζεις και τις δύο φωνές."
-        )
-
-    hook = (
-            (f"{name}, κάτσε μια στιγμή — " if name else "Κάτσε μια στιγμή — ")
-            + "ας μιλήσουμε για σένα χωρίς στεγνές ετικέτες."
-        )
-    return "\n\n".join([hook, p1, p2, p3, p4])
 
 
 def analyze_personality(

@@ -396,7 +396,7 @@ st.markdown(
 st.markdown(
     """
 <div class="hero">
-  <div class="ui-version-badge">UI v5.1 · Electric Midnight · Voice+Save</div>
+  <div class="ui-version-badge">UI v5.3 · Electric Midnight · Rich narrative</div>
   <span class="hero-kicker">Astrology · Ελληνικά</span>
   <h1>Αστρολογικός χάρτης</h1>
   <p>
@@ -753,7 +753,8 @@ with tab_pers:
         )
 
         if ai_provider != "off" and (_ks["gemini"] or _ks["xai"]):
-            if st.button("✨ AI εμπλουτισμός προσωπικότητας", use_container_width=True):
+            st.caption("Η τοπική ανάλυση είναι ήδη αφηγηματική. Το AI την κάνει ακόμα πιο «τηλεοπτική».")
+            if st.button("✨ AI εμπλουτισμός προσωπικότητας", use_container_width=True, type="primary"):
                 with st.spinner("AI ανάλυση…"):
                     text, src, err = enrich_personality(
                         analysis, chart, profile, provider=ai_provider

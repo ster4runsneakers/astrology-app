@@ -16,16 +16,32 @@ from personality import PersonalityAnalysis
 from zodiac import ZodiacSignId
 
 
+def _clean_key(val: str) -> str:
+    v = str(val).strip()
+    # common Streamlit paste mistakes: quotes, Bearer prefix, newlines
+    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+        v = v[1:-1].strip()
+    if v.lower().startswith("bearer "):
+        v = v[7:].strip()
+    v = "".join(ch for ch in v if ch not in "\r\n\t ")
+    return v
+
+
 def _secret(name: str) -> Optional[str]:
     for key in (name, name.lower(), name.upper()):
         try:
             val = st.secrets.get(key)  # type: ignore[attr-defined]
             if val:
-                return str(val).strip()
+                cleaned = _clean_key(str(val))
+                if cleaned:
+                    return cleaned
         except Exception:
             pass
     env = os.environ.get(name) or os.environ.get(name.upper()) or os.environ.get(name.lower())
-    return env.strip() if env else None
+    if not env:
+        return None
+    cleaned = _clean_key(env)
+    return cleaned or None
 
 
 def get_gemini_api_key() -> Optional[str]:
@@ -77,9 +93,11 @@ def _call_gemini(prompt: str, system: str) -> Tuple[Optional[str], Optional[str]
     try:
         genai.configure(api_key=key)
         model_names = [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
             "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-latest",
+            "gemini-2.0-flash-001",
+            "gemini-flash-latest",
         ]
         last_err = None
         for mid in model_names:
@@ -92,7 +110,13 @@ def _call_gemini(prompt: str, system: str) -> Tuple[Optional[str], Optional[str]
             except Exception as e:  # noqa: BLE001
                 last_err = str(e)
                 continue
-        return None, last_err or "gemini_empty"
+        msg = last_err or "gemini_empty"
+        if msg and ("404" in msg or "not found" in msg.lower()):
+            msg = (
+                "Gemini model 404 — ενημέρωσε το app (τρέχον: gemini-2.5-flash). "
+                f"Λεπτομέρεια: {msg}"
+            )
+        return None, msg
     except Exception as e:  # noqa: BLE001
         return None, str(e)
 
@@ -106,6 +130,7 @@ def _call_xai(prompt: str, system: str) -> Tuple[Optional[str], Optional[str]]:
     except ImportError:
         return None, "openai package not installed"
     client = OpenAI(api_key=key, base_url="https://api.x.ai/v1")
+    last = "xai_failed"
     for mid in ("grok-4.6", "grok-4.5", "grok-4.3"):
         try:
             resp = client.chat.completions.create(
@@ -121,8 +146,15 @@ def _call_xai(prompt: str, system: str) -> Tuple[Optional[str], Optional[str]]:
                 return text, None
         except Exception as e:  # noqa: BLE001
             last = str(e)
+            low = last.lower()
+            if "incorrect api key" in low or "invalid api key" in low or "unauthorized" in low:
+                return None, (
+                    "Λάθος/άκυρο XAI_API_KEY — πήγαινε https://console.x.ai , "
+                    "φτιάξε νέο key και βάλε το καθαρό στο Streamlit Secrets "
+                    "(χωρίς εισαγωγικά, χωρίς Bearer)."
+                )
             continue
-    return None, locals().get("last", "xai_failed")
+    return None, last
 
 
 def enrich_personality(
@@ -137,10 +169,11 @@ def enrich_personality(
     """
     system = AI_SYSTEM_PERSONALITY
     prompt = (
-        "Βάλε σε πιο ζωντανή, συνεκτική ελληνική ανάλυση προσωπικότητας "
-        "(3–5 σύντομες παραγράφους + λίστα δυνάμεων/προκλήσεων) με βάση:\n\n"
+        "Κάνε ΠΛΗΡΗ, ζωντανή ανάλυση προσωπικότητας (όχι περίληψη σχολείου). "
+        "Χρησιμοποίησε υποχρεωτικά τα placements. Μην επαναλάβεις στεγνά το MVP κείμενο· "
+        "ξύπνα το, βάλε αίμα, εικόνες, πρακτικές συμβουλές.\n\n"
         f"ΧΑΡΤΗΣ:\n{_chart_brief(chart, profile)}\n\n"
-        f"ΒΑΣΙΚΗ ΑΝΑΛΥΣΗ (MVP):\n{base.summary}\n"
+        f"ΒΟΗΘΗΤΙΚΟ MVP (πάρε ιδέες, ΜΗΝ το αντιγράψεις στεγνά):\n{base.summary}\n"
     )
     order = []
     if provider == "gemini":
