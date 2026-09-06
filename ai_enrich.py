@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import streamlit as st
 
 from chinese_zodiac import ChineseZodiac
+from voice_el import AI_SYSTEM_MONTHLY, AI_SYSTEM_PERSONALITY
 from monthly_outlook import MonthCard, MonthlyOutlook, build_monthly_outlook
 from natal import BirthProfile, NatalChart
 from personality import PersonalityAnalysis
@@ -134,11 +135,7 @@ def enrich_personality(
     Return (enriched_markdown, source, error).
     source: local | gemini | xai
     """
-    system = (
-        "Είσαι έμπειρος αστρολόγος που γράφει στα Ελληνικά, ζεστά και καθαρά. "
-        "Ψυχαγωγική ανάλυση μόνο — όχι ιατρικές/νομικές/χρηματοοικονομικές συμβουλές. "
-        "Μην εφευρίσκεις ακριβή γεγονότα ζωής. Χωρίς celebrity ονόματα."
-    )
+    system = AI_SYSTEM_PERSONALITY
     prompt = (
         "Βάλε σε πιο ζωντανή, συνεκτική ελληνική ανάλυση προσωπικότητας "
         "(3–5 σύντομες παραγράφους + λίστα δυνάμεων/προκλήσεων) με βάση:\n\n"
@@ -172,10 +169,7 @@ def enrich_monthly_outlook(
     provider: str = "auto",
 ) -> Tuple[MonthlyOutlook, Optional[str]]:
     """AI rewrite of monthly cards; falls back to base."""
-    system = (
-        "Γράφεις ελληνικές μηνιαίες αστρολογικές προβλέψεις (ψυχαγωγία). "
-        "JSON μόνο. Χωρίς hard dates γεγονότων, χωρίς medical/finance advice."
-    )
+    system = AI_SYSTEM_MONTHLY
     months_payload = [
         {"label": c.label_el, "theme": c.theme_el, "year": c.year, "month": c.month}
         for c in base.months
@@ -185,7 +179,7 @@ def enrich_monthly_outlook(
         cn = f"Κινεζικό: {chinese.animal_el}, στοιχείο {chinese.element_el} ({chinese.polarity})"
     prompt = (
         f"Ήλιος: {sun_id}. Προφίλ: {profile.name or '—'}, γέννηση {profile.date_of_birth}. {cn}\n"
-        f"Γράψε κείμενο για κάθε μήνα (2–3 προτάσεις EL).\n"
+        f"Γράψε ΔΙΑΦΟΡΕΤΙΚΟ κείμενο για κάθε μήνα (3–5 προτάσεις EL) — άλλη έμφαση, άλλη εικόνα, ΟΧΙ ίδια δομή παραγράφου.\n"
         f"Επίστεψε JSON: {{\"months\":[{{\"year\":2026,\"month\":9,\"theme\":\"...\",\"text\":\"...\"}}],"
         f"\"chinese_note\":\"...\"}}\n"
         f"Μήνες: {json.dumps(months_payload, ensure_ascii=False)}"

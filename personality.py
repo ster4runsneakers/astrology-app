@@ -5,12 +5,13 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from natal import BirthProfile, NatalChart, PlanetPosition
+from voice_el import VOICE_DISCLAIMER_EL, warm_wrap
 from zodiac import ZodiacSignId, get_zodiac_by_id
 
 DISCLAIMER_EL = (
-    "Η ανάλυση είναι ενδεικτική / ψυχαγωγική (MVP) — βασίζεται σε κλασικά "
-    "αστρολογικά μοτίβα ζωδίων και δεν αποτελεί ψυχολογική, ιατρική ή "
-    "επαγγελματική συμβουλή."
+    "Η ανάλυση είναι ενδεικτική / ψυχαγωγική — βασίζεται σε αστρολογικά μοτίβα "
+    "με ζεστό ελληνικό media ύφος (πρωτότυπα κείμενα). Δεν αποτελεί ψυχολογική, "
+    "ιατρική ή επαγγελματική συμβουλή. " + VOICE_DISCLAIMER_EL
 )
 
 # ---------------------------------------------------------------------------
@@ -523,7 +524,11 @@ def _blend_summary(
             "είναι υλικό για ωρίμανση, όταν αναγνωρίζεις και τις δύο φωνές."
         )
 
-    return "\n\n".join([p1, p2, p3, p4])
+    hook = (
+            (f"{name}, κάτσε μια στιγμή — " if name else "Κάτσε μια στιγμή — ")
+            + "ας μιλήσουμε για σένα χωρίς στεγνές ετικέτες."
+        )
+    return "\n\n".join([hook, p1, p2, p3, p4])
 
 
 def analyze_personality(
@@ -548,23 +553,26 @@ def analyze_personality(
     sun_z = get_zodiac_by_id(sun_id)
     moon_z = get_zodiac_by_id(moon_id)
 
-    sun_section = (
-        f"**{sun.formatted}** — {CORE_IDENTITY[sun_id]}"
+    sun_section = warm_wrap(
+        "Ήλιος",
+        f"**{sun.formatted}** — {CORE_IDENTITY[sun_id]}",
     )
-    moon_section = (
-        f"**{moon.formatted}** — {MOON_EMOTIONS[moon_id]}"
+    moon_section = warm_wrap(
+        "Σελήνη",
+        f"**{moon.formatted}** — {MOON_EMOTIONS[moon_id]}",
     )
 
     if asc_id and chart.ascendant is not None:
         asc_z = get_zodiac_by_id(asc_id)
-        asc_section = (
-            f"**{chart.ascendant.formatted}** — {ASC_OUTWARD[asc_id]}"
+        asc_section = warm_wrap(
+            "Ωροσκόπος",
+            f"**{chart.ascendant.formatted}** — {ASC_OUTWARD[asc_id]}",
         )
     else:
         asc_section = (
-            "Η ώρα γέννησης λείπει ή είναι προσεγγιστική, οπότε **δεν "
-            "υπολογίζεται Ωροσκόπος**. Με ακριβή ώρα και τόπο, η ενότητα "
-            "αυτή περιγράφει πώς σε βλέπουν οι άλλοι στην πρώτη επαφή."
+            "Χωρίς ακριβή ώρα, δεν «ανοίγει» ο Ωροσκόπος — και κρίμα, γιατί εκεί "
+            "φαίνεται το πρώτο σου χαμόγελο στον κόσμο. Βάλε ώρα και τόπο όταν μπορείς· "
+            "θα σε διαβάσουμε πιο καθαρά."
         )
 
     mercury = _planet_by_id(chart, "mercury")
@@ -574,17 +582,17 @@ def analyze_personality(
     mercury_section = None
     if mercury is not None:
         mid: ZodiacSignId = mercury.sign  # type: ignore[assignment]
-        mercury_section = f"**{mercury.formatted}** — {MERCURY_STYLE[mid]}"
+        mercury_section = warm_wrap("Ερμής", f"**{mercury.formatted}** — {MERCURY_STYLE[mid]}")
 
     venus_section = None
     if venus is not None:
         vid: ZodiacSignId = venus.sign  # type: ignore[assignment]
-        venus_section = f"**{venus.formatted}** — {VENUS_STYLE[vid]}"
+        venus_section = warm_wrap("Αφροδίτη", f"**{venus.formatted}** — {VENUS_STYLE[vid]}")
 
     mars_section = None
     if mars is not None:
         maid: ZodiacSignId = mars.sign  # type: ignore[assignment]
-        mars_section = f"**{mars.formatted}** — {MARS_STYLE[maid]}"
+        mars_section = warm_wrap("Άρης", f"**{mars.formatted}** — {MARS_STYLE[maid]}")
 
     strength_pool: list[str] = []
     challenge_pool: list[str] = []

@@ -5,6 +5,7 @@ Main entry for Streamlit Community Cloud (Main file path: streamlit_app.py)
 from __future__ import annotations
 
 from datetime import date, time
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -22,6 +23,14 @@ from natal import (
 )
 from personality import analyze_personality
 from places import PLACE_PRESETS, PRESET_NAMES, TIMEZONE_OPTIONS, get_preset
+from storage import (
+    build_save_payload,
+    dumps_save,
+    list_saved,
+    loads_save,
+    profile_from_save,
+    save_to_disk,
+)
 
 st.set_page_config(
     page_title="Αστρολογικός χάρτης",
@@ -387,7 +396,7 @@ st.markdown(
 st.markdown(
     """
 <div class="hero">
-  <div class="ui-version-badge">UI v5 · Electric Midnight · Mobile</div>
+  <div class="ui-version-badge">UI v5.1 · Electric Midnight · Voice+Save</div>
   <span class="hero-kicker">Astrology · Ελληνικά</span>
   <h1>Αστρολογικός χάρτης</h1>
   <p>
@@ -398,6 +407,41 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
+# --- Save / load --------------------------------------------------------------
+with st.expander("💾 Αποθήκευση & φόρτωση", expanded=False):
+    st.caption(
+        "Στο Cloud κατεβάζεις JSON στον υπολογιστή σου. "
+        "Τοπικά μπορεί να γραφτεί και στο `saved_profiles/`."
+    )
+    up = st.file_uploader("Φόρτωση αποθηκευμένου JSON", type=["json"], key="load_profile_json")
+    if up is not None and st.button("📥 Εφαρμογή αρχείου", use_container_width=True):
+        try:
+            data = loads_save(up.getvalue())
+            st.session_state.profile = profile_from_save(data)
+            st.session_state.computed = True
+            if data.get("ai_personality"):
+                st.session_state["ai_personality"] = data["ai_personality"]
+            st.success("Φορτώθηκε το προφίλ.")
+            st.rerun()
+        except Exception as exc:  # noqa: BLE001
+            st.error(f"Αποτυχία φόρτωσης: {exc}")
+
+    local_files = list_saved()
+    if local_files:
+        pick = st.selectbox(
+            "Τοπικά αποθηκευμένα",
+            options=[str(x.name) for x in local_files],
+        )
+        if st.button("Άνοιγμα τοπικού", use_container_width=True):
+            try:
+                data = loads_save((Path("saved_profiles") / pick).read_text(encoding="utf-8"))
+                st.session_state.profile = profile_from_save(data)
+                st.session_state.computed = True
+                st.success(f"Φορτώθηκε: {pick}")
+                st.rerun()
+            except Exception as exc:  # noqa: BLE001
+                st.error(str(exc))
 
 # --- Birth form ---------------------------------------------------------------
 st.markdown(
@@ -772,7 +816,11 @@ with tab_fore:
         '<p class="ui-card-title">Επόμενοι μήνες</p>',
         unsafe_allow_html=True,
     )
-    n_months = st.slider("Πόσοι μήνες", 3, 6, 6)
+    n_months = st.slider("Πόσοι μήνες", 3, 6, 6, key="n_months_slider")
+    if st.session_state.get("_last_n_months") != n_months:
+        st.session_state["_last_n_months"] = n_months
+        st.session_state.pop("ai_outlook", None)
+
     outlook = build_monthly_outlook(sun.id, chinese, start=date.today(), months=n_months)
 
     if ai_provider != "off" and (_ks["gemini"] or _ks["xai"]):
@@ -782,10 +830,11 @@ with tab_fore:
                     sun.id, chinese, outlook, profile, provider=ai_provider
                 )
                 st.session_state["ai_outlook"] = {"outlook": outlook2, "error": err}
-        if st.session_state.get("ai_outlook"):
-            outlook = st.session_state["ai_outlook"]["outlook"]
-            if st.session_state["ai_outlook"].get("error") and outlook.source == "local":
-                st.warning(f"AI fallback: {st.session_state['ai_outlook']['error']}")
+        stored = st.session_state.get("ai_outlook")
+        if stored and hasattr(stored.get("outlook"), "months"):
+            outlook = stored["outlook"]
+            if stored.get("error") and getattr(outlook, "source", "") == "local":
+                st.warning(f"AI fallback: {stored['error']}")
 
     st.caption(f"Πηγή: `{outlook.source}`")
     if outlook.chinese_note_el:
@@ -801,7 +850,60 @@ with tab_fore:
     )
 
 st.divider()
+st.markdown("### 💾 Αποθήκευση τρέχουσας ανάλυσης")
+try:
+    _pers = analyze_personality(chart, profile)
+    _sum = _pers.summary
+except Exception:
+    _sum = ""
+
+_months_list = []
+if "outlook" in locals() and hasattr(outlook, "months"):
+    _months_list = [
+        {
+            "year": c.year,
+            "month": c.month,
+            "label_el": c.label_el,
+            "theme_el": c.theme_el,
+            "text_el": c.text_el,
+        }
+        for c in outlook.months
+    ]
+_outlook_payload = {
+    "source": getattr(outlook, "source", "local") if "outlook" in locals() else "local",
+    "chinese_note_el": getattr(outlook, "chinese_note_el", "") if "outlook" in locals() else "",
+    "months": _months_list,
+}
+payload = build_save_payload(
+    profile,
+    sun_el=sun.name_el,
+    chinese={
+        "animal_el": chinese.animal_el,
+        "element_el": chinese.element_el,
+        "polarity": chinese.polarity,
+        "lunar_year": chinese.lunar_year,
+        "summary_el": chinese.summary_el,
+    },
+    personality_summary=_sum,
+    ai_personality=st.session_state.get("ai_personality"),
+    outlook=_outlook_payload,
+)
+json_bytes = dumps_save(payload).encode("utf-8")
+safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in (profile.name or "astro"))[:40]
+st.download_button(
+    "⬇️ Κατέβασμα JSON (στοιχεία + αναλύσεις)",
+    data=json_bytes,
+    file_name=f"{safe}_astrology_save.json",
+    mime="application/json",
+    use_container_width=True,
+)
+if st.button("💾 Αποθήκευση και στον δίσκο (local)", use_container_width=True):
+    try:
+        path = save_to_disk(payload)
+        st.success(f"Αποθηκεύτηκε: `{path}`")
+    except Exception as exc:  # noqa: BLE001
+        st.warning(f"Δεν γράφτηκε δίσκος (π.χ. Cloud): {exc}")
+
 st.caption(
-    "Υπολογισμοί με Skyfield + JPL DE421 · προφίλ σε `st.session_state` "
-    "(το Streamlit Cloud είναι εφήμερο — δεν υπάρχει μόνιμη αποθήκευση) · MVP επίδειξης"
+    "Skyfield + JPL DE421 · Electric Midnight · ζεστό ελληνικό ύφος · αποθήκευση JSON · Gemini/xAI"
 )

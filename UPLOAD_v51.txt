@@ -1,0 +1,5 @@
+v5.1 Voice+Save
+- warmer Greek media astrology tone (original)
+- varied monthly forecasts
+- JSON save/load for profile+analyses
+Upload to astrology-mvp root, reboot. Badge: UI v5.1 · Electric Midnight · Voice+Save
