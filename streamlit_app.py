@@ -12,7 +12,9 @@ import streamlit as st
 
 from chart_viz import build_chart_figure, chart_table_rows, houses_table_rows
 from ai_enrich import enrich_monthly_outlook, enrich_personality, keys_status
+from chinese_analysis import analyze_chinese
 from chinese_zodiac import get_chinese_zodiac
+from synastry import build_synastry
 from horoscope import get_daily_horoscope
 from monthly_outlook import build_monthly_outlook
 from natal import (
@@ -23,11 +25,15 @@ from natal import (
 )
 from personality import analyze_personality
 from places import PLACE_PRESETS, PRESET_NAMES, TIMEZONE_OPTIONS, get_preset
+from ebook_export import build_epub_bytes, build_pdf_bytes, default_ebook_basename
 from storage import (
     build_save_payload,
     dumps_save,
+    library_key,
     list_saved,
+    load_all_disk_payloads,
     loads_save,
+    payload_label,
     profile_from_save,
     save_to_disk,
 )
@@ -46,6 +52,9 @@ if "computed" not in st.session_state:
     st.session_state.computed = False
 if "ephemeris_ok" not in st.session_state:
     st.session_state.ephemeris_ok = False
+if "profile_library" not in st.session_state:
+    # key -> payload dict (in-app multi-profile library for synastry)
+    st.session_state.profile_library = load_all_disk_payloads()
 
 
 def _apply_preset(name: str) -> None:
@@ -396,7 +405,7 @@ st.markdown(
 st.markdown(
     """
 <div class="hero">
-  <div class="ui-version-badge">UI v5.3 · Electric Midnight · Rich narrative</div>
+  <div class="ui-version-badge">UI v5.5 · Electric Midnight · Chinese+Synastry</div>
   <span class="hero-kicker">Astrology · Ελληνικά</span>
   <h1>Αστρολογικός χάρτης</h1>
   <p>
@@ -409,39 +418,49 @@ st.markdown(
 )
 
 # --- Save / load --------------------------------------------------------------
-with st.expander("💾 Αποθήκευση & φόρτωση", expanded=False):
-    st.caption(
-        "Στο Cloud κατεβάζεις JSON στον υπολογιστή σου. "
-        "Τοπικά μπορεί να γραφτεί και στο `saved_profiles/`."
+# --- Profile library (multi-person / synastry) --------------------------------
+lib: dict = st.session_state.profile_library
+st.markdown('<p class="ui-card-title">Αποθηκευμένα προφίλ</p>', unsafe_allow_html=True)
+if lib:
+    labels = {payload_label(v): k for k, v in lib.items()}
+    choice = st.selectbox(
+        "Διάλεξε ποιο προφίλ θέλεις να δεις",
+        options=["— τρέχον / νέο —"] + list(labels.keys()),
+        help="Αποθήκευσε πολλά άτομα για συναστρία.",
     )
-    up = st.file_uploader("Φόρτωση αποθηκευμένου JSON", type=["json"], key="load_profile_json")
-    if up is not None and st.button("📥 Εφαρμογή αρχείου", use_container_width=True):
-        try:
-            data = loads_save(up.getvalue())
+    c_load, c_del = st.columns(2)
+    with c_load:
+        if choice != "— τρέχον / νέο —" and st.button("👁 Προβολή προφίλ", use_container_width=True):
+            data = lib[labels[choice]]
             st.session_state.profile = profile_from_save(data)
             st.session_state.computed = True
             if data.get("ai_personality"):
                 st.session_state["ai_personality"] = data["ai_personality"]
-            st.success("Φορτώθηκε το προφίλ.")
+            st.session_state.pop("ai_outlook", None)
+            st.success(f"Ενεργό: {choice}")
+            st.rerun()
+    with c_del:
+        if choice != "— τρέχον / νέο —" and st.button("🗑 Διαγραφή από λίστα", use_container_width=True):
+            lib.pop(labels[choice], None)
+            st.session_state.profile_library = lib
+            st.rerun()
+else:
+    st.caption("Δεν υπάρχουν ακόμα αποθηκευμένα προφίλ — συμπλήρωσε στοιχεία και πάτα αποθήκευση κάτω.")
+
+with st.expander("💾 Εισαγωγή / εξαγωγή αρχείων", expanded=False):
+    st.caption("JSON στον υπολογιστή σου · χρήσιμο και στο Streamlit Cloud.")
+    up = st.file_uploader("Φόρτωση αποθηκευμένου JSON", type=["json"], key="load_profile_json")
+    if up is not None and st.button("📥 Εισαγωγή στη βιβλιοθήκη", use_container_width=True):
+        try:
+            data = loads_save(up.getvalue())
+            key = library_key(data)
+            st.session_state.profile_library[key] = data
+            st.session_state.profile = profile_from_save(data)
+            st.session_state.computed = True
+            st.success(f"Μπήκε στη βιβλιοθήκη: {payload_label(data)}")
             st.rerun()
         except Exception as exc:  # noqa: BLE001
             st.error(f"Αποτυχία φόρτωσης: {exc}")
-
-    local_files = list_saved()
-    if local_files:
-        pick = st.selectbox(
-            "Τοπικά αποθηκευμένα",
-            options=[str(x.name) for x in local_files],
-        )
-        if st.button("Άνοιγμα τοπικού", use_container_width=True):
-            try:
-                data = loads_save((Path("saved_profiles") / pick).read_text(encoding="utf-8"))
-                st.session_state.profile = profile_from_save(data)
-                st.session_state.computed = True
-                st.success(f"Φορτώθηκε: {pick}")
-                st.rerun()
-            except Exception as exc:  # noqa: BLE001
-                st.error(str(exc))
 
 # --- Birth form ---------------------------------------------------------------
 st.markdown(
@@ -651,8 +670,8 @@ except Exception:
 chinese = get_chinese_zodiac(_dob)
 
 # Tabs
-tab_chart, tab_pers, tab_cn, tab_fore = st.tabs(
-    ["Χάρτης", "Προσωπικότητα", "Κινεζικό", "Προβλέψεις"]
+tab_chart, tab_pers, tab_cn, tab_fore, tab_syn = st.tabs(
+    ["Χάρτης", "Προσωπικότητα", "Κινεζικό", "Προβλέψεις", "Συναστρία"]
 )
 
 # ===== Χάρτης ================================================================
@@ -793,10 +812,21 @@ with tab_cn:
 """,
         unsafe_allow_html=True,
     )
-    st.markdown(chinese.summary_el)
+    cn_an = analyze_chinese(chinese, name=profile.name)
+    st.markdown(cn_an.body_el)
+    st.markdown("#### Αγάπη & σχέσεις")
+    st.markdown(cn_an.love_el)
+    st.markdown("#### Δουλειά & ρόλος")
+    st.markdown(cn_an.work_el)
+    st.markdown("#### Δώρο")
+    st.success(cn_an.gift_el)
+    st.markdown("#### Σκιά")
+    st.warning(cn_an.shadow_el)
+    st.markdown("#### Πρακτικές νότες")
+    for tip in cn_an.tips:
+        st.markdown(f"- {tip}")
     st.caption(
-        "Υπολογισμός με βάση την κινεζική πρωτοχρονιά (πίνακας ετών). "
-        "Ενδεικτικό / ψυχαγωγικό MVP."
+        "Υπολογισμός με κινεζική πρωτοχρονιά (πίνακας ετών). Ενδεικτικό / ψυχαγωγικό MVP."
     )
 
 # ===== Προβλέψεις ============================================================
@@ -850,6 +880,62 @@ with tab_fore:
         unsafe_allow_html=True,
     )
 
+# ===== Συναστρία =============================================================
+with tab_syn:
+    st.markdown(
+        '<p class="ui-card-title">Συναστρία (δυτική + κινεζική)</p>',
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "Σύγκρινε δύο αποθηκευμένα προφίλ (ή το τρέχον με ένα αποθηκευμένο). "
+        "Αποθήκευσε πρώτα τουλάχιστον δύο άτομα στη βιβλιοθήκη."
+    )
+    lib_now = st.session_state.profile_library
+    if len(lib_now) < 1:
+        st.info("Αποθήκευσε προφίλ (κάτω στη σελίδα) για να ενεργοποιηθεί η συναστρία.")
+    else:
+        opts = {payload_label(v): k for k, v in lib_now.items()}
+        # also offer current as A
+        current_label = f"Τρέχον: {profile.name or 'χωρίς όνομα'} ({profile.date_of_birth})"
+        a_opts = ["[Τρέχον προφίλ]"] + list(opts.keys())
+        b_opts = list(opts.keys())
+        ca, cb = st.columns(2)
+        with ca:
+            pick_a = st.selectbox("Άτομο Α", a_opts, key="syn_a")
+        with cb:
+            pick_b = st.selectbox("Άτομο Β", b_opts, key="syn_b")
+        if st.button("✨ Υπολογισμός συναστρίας", type="primary", use_container_width=True):
+            try:
+                if pick_a == "[Τρέχον προφίλ]":
+                    pa = profile
+                    chart_a = chart
+                else:
+                    pa = profile_from_save(lib_now[opts[pick_a]])
+                    chart_a = None
+                pb = profile_from_save(lib_now[opts[pick_b]])
+                if pick_a != "[Τρέχον προφίλ]" and opts[pick_a] == opts[pick_b]:
+                    st.warning("Διάλεξε δύο διαφορετικά προφίλ.")
+                else:
+                    report = build_synastry(pa, pb, chart_a=chart_a, chart_b=None)
+                    st.session_state["last_synastry"] = report
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Αποτυχία συναστρίας: {exc}")
+
+        if st.session_state.get("last_synastry"):
+            rep = st.session_state["last_synastry"]
+            st.markdown(f"### {rep.title_el}")
+            st.metric("Συμβατότητα (ενδεικτική)", f"{rep.score}/10")
+            st.caption(f"{rep.sun_a} × {rep.sun_b} · {rep.animal_a} × {rep.animal_b}")
+            st.markdown("#### Δυτική ματιά")
+            st.markdown(rep.western_el)
+            st.markdown("#### Κινεζική ματιά")
+            st.markdown(rep.chinese_el)
+            st.markdown("#### Συμβουλές")
+            for tip in rep.tips:
+                st.markdown(f"- {tip}")
+            st.caption("Ψυχαγωγική συναστρία MVP — όχι πρόβλεψη σχέσης.")
+
+
 st.divider()
 st.markdown("### 💾 Αποθήκευση τρέχουσας ανάλυσης")
 try:
@@ -875,20 +961,34 @@ _outlook_payload = {
     "chinese_note_el": getattr(outlook, "chinese_note_el", "") if "outlook" in locals() else "",
     "months": _months_list,
 }
+_cn_an = analyze_chinese(chinese, name=profile.name)
 payload = build_save_payload(
     profile,
     sun_el=sun.name_el,
     chinese={
+        "animal_id": chinese.animal_id,
         "animal_el": chinese.animal_el,
         "element_el": chinese.element_el,
         "polarity": chinese.polarity,
         "lunar_year": chinese.lunar_year,
         "summary_el": chinese.summary_el,
     },
+    chinese_analysis={
+        "headline_el": _cn_an.headline_el,
+        "body_el": _cn_an.body_el,
+        "love_el": _cn_an.love_el,
+        "work_el": _cn_an.work_el,
+        "gift_el": _cn_an.gift_el,
+        "shadow_el": _cn_an.shadow_el,
+        "tips": _cn_an.tips,
+    },
     personality_summary=_sum,
     ai_personality=st.session_state.get("ai_personality"),
     outlook=_outlook_payload,
 )
+# keep in in-app library for synastry / profile switching
+st.session_state.profile_library[library_key(payload)] = payload
+
 json_bytes = dumps_save(payload).encode("utf-8")
 safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in (profile.name or "astro"))[:40]
 st.download_button(
@@ -898,6 +998,35 @@ st.download_button(
     mime="application/json",
     use_container_width=True,
 )
+
+st.markdown("### 📖 E-book")
+st.caption("PDF (A5) για ανάγνωση/εκτύπωση · EPUB για Kindle / Apple Books / Google Play Books.")
+ebook_base = default_ebook_basename(profile)
+try:
+    pdf_bytes = build_pdf_bytes(payload, title="Αστρολογικό πορτρέτο")
+    st.download_button(
+        "📕 Κατέβασμα PDF e-book",
+        data=pdf_bytes,
+        file_name=f"{ebook_base}.pdf",
+        mime="application/pdf",
+        use_container_width=True,
+        type="primary",
+    )
+except Exception as exc:  # noqa: BLE001
+    st.warning(f"PDF μη διαθέσιμο: {exc}")
+
+try:
+    epub_bytes = build_epub_bytes(payload, title="Αστρολογικό πορτρέτο")
+    st.download_button(
+        "📗 Κατέβασμα EPUB e-book",
+        data=epub_bytes,
+        file_name=f"{ebook_base}.epub",
+        mime="application/epub+zip",
+        use_container_width=True,
+    )
+except Exception as exc:  # noqa: BLE001
+    st.warning(f"EPUB μη διαθέσιμο: {exc}")
+
 if st.button("💾 Αποθήκευση και στον δίσκο (local)", use_container_width=True):
     try:
         path = save_to_disk(payload)
