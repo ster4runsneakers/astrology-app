@@ -1,0 +1,37 @@
+ΟΔΗΓΙΕΣ ΑΝΕΒΑΣΜΑΤΟΣ ΣΤΟ GITHUB (web UI)
+========================================
+Repo: https://github.com/ster4runsneakers/astrology-app
+Main file path στο Streamlit Cloud: streamlit_app.py
+
+1) ΔΙΑΓΡΑΦΗ σπασμένων αρχείων στο repo (αν υπάρχουν):
+   - Διαγράψτε αρχεία ΧΩΡΙΣ κατάληξη .py στο root:
+     natal, zodiac, horoscope, places, chart_viz, __init__
+   - Διαγράψτε επίσης τυχόν παλιό φάκελο astro/ ή Next.js αρχεία
+     αν δεν τα χρειάζεστε πλέον.
+
+2) ΑΝΕΒΑΣΜΑ αυτών των αρχείων ΣΤΟ ROOT του repo
+   (κρατήστε τα ονόματα ΜΕ .py — μην τα ανεβάσετε χωρίς επέκταση):
+
+   streamlit_app.py
+   natal.py
+   zodiac.py
+   horoscope.py
+   places.py
+   chart_viz.py
+   requirements.txt
+   README.md
+   .gitignore
+   UPLOAD_GREEK.txt   (προαιρετικό)
+
+   Φάκελοι:
+   .streamlit/config.toml
+   data/.gitkeep      (ο φάκελος data/ · ΟΧΙ αρχεία .bsp)
+
+3) Στο GitHub: Add file → Upload files → σύρετε τα παραπάνω → Commit.
+
+4) Streamlit Community Cloud:
+   - New app → επιλέξτε το repo / branch
+   - Main file path: streamlit_app.py
+   - Deploy
+
+Σημείωση: ΜΗΝ ανεβάσετε .venv, __pycache__, ή data/*.bsp.
