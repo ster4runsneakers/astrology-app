@@ -11,13 +11,13 @@ from matplotlib.figure import Figure
 from natal import HouseCusp, NatalChart, PlanetPosition
 from zodiac import ZODIAC_SIGNS
 
-# Soft cosmos palette
-_BG = "#0c0a14"
-_RING = "#2e2a48"
-_TEXT = "#f1eef8"
-_ACCENT = "#c4b5fd"
-_GOLD = "#f5d76e"
-_MUTED = "#9b97b0"
+# Electric Midnight palette (match Streamlit UI)
+_BG = "#06101c"
+_RING = "#0f3d3a"
+_TEXT = "#ecfdf5"
+_ACCENT = "#34d399"
+_GOLD = "#fbbf24"
+_MUTED = "#7aa897"
 
 _PLANET_GLYPH = {
     "sun": "☉",
@@ -131,7 +131,7 @@ def build_chart_figure(chart: NatalChart) -> Figure:
             zorder=6,
             bbox=dict(
                 boxstyle="round,pad=0.15",
-                facecolor="#1a1530",
+                facecolor="#0a1f2e",
                 edgecolor=color,
                 linewidth=0.6,
                 alpha=0.85,

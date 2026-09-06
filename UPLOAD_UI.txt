@@ -1,0 +1,4 @@
+Astrology MVP — Electric Midnight + mobile UI v5
+Upload ALL files to astrology-mvp repo ROOT (overwrite).
+Keep Secrets: GEMINI_API_KEY / XAI_API_KEY
+Reboot Streamlit. Badge should say: UI v5 · Electric Midnight · Mobile

@@ -53,148 +53,197 @@ def _apply_preset(name: str) -> None:
 st.markdown(
     """
 <style>
-  /* Layout */
-  .block-container {
-    padding-top: 1.25rem;
-    padding-bottom: 2.5rem;
-    max-width: 760px;
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  :root {
+    --em-emerald: #10b981;
+    --em-emerald-deep: #059669;
+    --em-gold: #fbbf24;
+    --em-navy: #06101c;
+    --em-teal: #0a1f2e;
+    --em-panel: rgba(8, 28, 42, 0.92);
+    --em-border: rgba(16, 185, 129, 0.18);
   }
-  footer { visibility: hidden; }
+
+  html, body, [class*="css"], .stApp {
+    font-family: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  }
+
+  .stApp {
+    background:
+      radial-gradient(1000px 500px at 6% -10%, rgba(16,185,129,0.18) 0%, transparent 55%),
+      radial-gradient(900px 480px at 96% 4%, rgba(251,191,36,0.10) 0%, transparent 50%),
+      radial-gradient(700px 500px at 50% 105%, rgba(6,78,92,0.35) 0%, transparent 45%),
+      linear-gradient(165deg, #0a1f2e 0%, #06101c 45%, #030b14 100%);
+    color: #e8f5f0;
+  }
+
+  .block-container {
+    padding-top: 1rem;
+    padding-bottom: 2.6rem;
+    max-width: 720px;
+  }
   header[data-testid="stHeader"] { background: transparent; }
+  footer { visibility: hidden; }
+  h1, h2, h3, h4 { letter-spacing: -0.02em; color: #f0fdf8; }
+  .stMarkdown p { line-height: 1.55; color: #d5ebe1; }
 
-  /* Typography */
-  h1, h2, h3 { letter-spacing: -0.01em; }
-  .stMarkdown p { line-height: 1.55; }
-
-  /* App header */
-  .app-header {
-    text-align: center;
+  /* Hero — Electric Midnight */
+  .hero {
+    padding: 1.25rem 1.2rem 1.15rem;
+    border-radius: 18px;
+    background:
+      linear-gradient(135deg, rgba(16,185,129,0.20) 0%, rgba(6,78,92,0.35) 45%, rgba(251,191,36,0.08) 100%),
+      rgba(4, 22, 34, 0.88);
+    border: 1px solid rgba(16,185,129,0.32);
+    border-left: 4px solid #fbbf24;
+    box-shadow: 0 16px 44px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.05);
+    margin-bottom: 0.85rem;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    right: -50px; top: -50px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(251,191,36,0.16), transparent 70%);
+    pointer-events: none;
+  }
+  .hero-kicker {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #34d399;
     margin-bottom: 0.25rem;
   }
-  .app-kicker {
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    color: #9b87d8;
-    font-size: 0.72rem;
-    margin: 0;
-    font-weight: 600;
-  }
-  .app-title {
-    margin: 0.4rem 0 0.35rem 0;
-    color: #f8f7fc;
-    font-size: clamp(1.55rem, 4.5vw, 2rem);
+  .ui-version-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    background: linear-gradient(90deg, #10b981, #059669);
+    color: #041018;
     font-weight: 700;
-    line-height: 1.2;
+    font-size: 0.7rem;
+    padding: 0.28rem 0.65rem;
+    border-radius: 8px;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.45rem;
+    border: 1px solid rgba(255,255,255,0.12);
   }
-  .app-sub {
-    color: #a8a3b8;
-    font-size: 0.92rem;
-    margin: 0 auto;
-    max-width: 30rem;
-    line-height: 1.5;
+  .hero h1 {
+    margin: 0.2rem 0 0.4rem 0;
+    font-weight: 800;
+    font-size: clamp(1.35rem, 5.5vw, 1.85rem);
+    line-height: 1.15;
+    color: #f0fdf8;
+  }
+  .hero p {
+    margin: 0;
+    opacity: 0.92;
+    font-size: clamp(0.88rem, 3.4vw, 0.98rem);
+    line-height: 1.45;
+    color: #c8e6d8;
+    max-width: 36rem;
   }
 
-  /* Cards */
-  .ui-card {
-    background: linear-gradient(160deg, rgba(28, 22, 48, 0.95) 0%, rgba(18, 16, 32, 0.98) 100%);
-    border: 1px solid rgba(167, 139, 250, 0.22);
-    border-radius: 1rem;
-    padding: 1.1rem 1.15rem 1.15rem;
-    margin: 0.65rem 0 1rem 0;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
-  }
   .ui-card-title {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #b8a5e8;
-    margin: 0 0 0.75rem 0;
+    color: #34d399;
+    margin: 0 0 0.65rem 0;
   }
 
-  /* Sun hero */
+  /* Sun / Chinese hero card */
   .sun-hero {
     text-align: center;
-    padding: 1.5rem 1.1rem 1.35rem;
-    border-radius: 1.15rem;
+    padding: 1.35rem 1rem 1.2rem;
+    border-radius: 18px;
     background:
-      radial-gradient(ellipse at 50% 0%, rgba(167, 139, 250, 0.28) 0%, transparent 55%),
-      linear-gradient(145deg, #1c1535 0%, #2a1f4e 50%, #15182a 100%);
-    border: 1px solid rgba(196, 181, 253, 0.35);
-    margin: 0.35rem 0 1.1rem 0;
-    box-shadow: 0 10px 36px rgba(88, 60, 160, 0.22);
+      linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(6,78,92,0.4) 50%, rgba(251,191,36,0.08) 100%),
+      rgba(4, 22, 34, 0.92);
+    border: 1px solid rgba(16,185,129,0.32);
+    border-left: 4px solid #fbbf24;
+    margin: 0.35rem 0 1rem 0;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.38);
   }
   .sun-hero .sym {
-    font-size: clamp(2.6rem, 8vw, 3.4rem);
+    font-size: clamp(2.5rem, 9vw, 3.3rem);
     line-height: 1;
-    filter: drop-shadow(0 0 12px rgba(240, 199, 94, 0.35));
+    filter: drop-shadow(0 0 14px rgba(251,191,36,0.35));
   }
   .sun-hero .name {
-    font-size: clamp(1.45rem, 5vw, 1.85rem);
-    font-weight: 700;
-    color: #f5f0ff;
+    font-size: clamp(1.35rem, 5.5vw, 1.8rem);
+    font-weight: 800;
+    color: #f0fdf8;
     margin-top: 0.35rem;
   }
   .sun-hero .meta {
-    color: #c4b5fd;
-    font-size: 0.95rem;
+    color: #86efac;
+    font-size: clamp(0.88rem, 3.5vw, 0.98rem);
     margin-top: 0.15rem;
   }
   .sun-hero .label {
-    color: #8b8699;
-    font-size: 0.8rem;
+    color: #7aa897;
+    font-size: 0.78rem;
     margin-top: 0.55rem;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
   }
 
-  /* Angle chips (Asc / MC) */
   .angle-row {
     display: flex;
-    gap: 0.65rem;
+    gap: 0.55rem;
     flex-wrap: wrap;
     margin: 0.35rem 0 0.85rem 0;
   }
   .angle-chip {
     flex: 1 1 140px;
     min-width: 140px;
-    background: rgba(167, 139, 250, 0.1);
-    border: 1px solid rgba(196, 181, 253, 0.35);
-    border-radius: 0.85rem;
-    padding: 0.85rem 0.95rem;
+    background: linear-gradient(145deg, rgba(8,36,52,0.95) 0%, rgba(4,20,32,0.98) 100%);
+    border: 1px solid rgba(16,185,129,0.28);
+    border-left: 3px solid #fbbf24;
+    border-radius: 12px;
+    padding: 0.85rem 0.9rem;
     text-align: center;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.28);
   }
   .angle-chip .k {
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: #b8a5e8;
+    color: #fbbf24;
     font-weight: 700;
     margin: 0;
   }
   .angle-chip .v {
     font-size: 1.05rem;
     font-weight: 700;
-    color: #f0e9ff;
+    color: #ecfdf5;
     margin: 0.25rem 0 0 0;
   }
   .angle-chip .d {
     font-size: 0.8rem;
-    color: #a8a3b8;
+    color: #9ecbb8;
     margin: 0.15rem 0 0 0;
   }
 
-  /* Personality section blocks */
   .pers-block {
-    background: rgba(22, 18, 42, 0.7);
-    border: 1px solid rgba(167, 139, 250, 0.18);
-    border-radius: 0.85rem;
+    background: linear-gradient(160deg, rgba(10,40,56,0.92) 0%, rgba(4,18,28,0.96) 100%);
+    border: 1px solid rgba(16,185,129,0.2);
+    border-radius: 12px;
     padding: 0.9rem 1rem;
     margin: 0.55rem 0;
   }
   .pers-block h4 {
     margin: 0 0 0.4rem 0;
     font-size: 0.95rem;
-    color: #e4dcff;
+    color: #a7f3d0;
   }
   .tag-list {
     display: flex;
@@ -203,99 +252,152 @@ st.markdown(
     margin: 0.35rem 0 0.2rem 0;
   }
   .tag {
-    background: rgba(167, 139, 250, 0.14);
-    border: 1px solid rgba(196, 181, 253, 0.28);
-    color: #e8e0ff;
+    background: rgba(16,185,129,0.14);
+    border: 1px solid rgba(16,185,129,0.32);
+    color: #d1fae5;
     border-radius: 999px;
-    padding: 0.28rem 0.7rem;
+    padding: 0.35rem 0.75rem;
     font-size: 0.82rem;
   }
   .tag.challenge {
-    background: rgba(251, 146, 60, 0.1);
-    border-color: rgba(251, 146, 60, 0.3);
-    color: #fdd5b0;
+    background: rgba(251,191,36,0.1);
+    border-color: rgba(251,191,36,0.35);
+    color: #fde68a;
   }
 
-  /* Disclaimer */
   .disclaimer {
     font-size: 0.78rem;
-    color: #9b97b0;
-    border-left: 3px solid #a78bfa;
+    color: #8fb9a8;
+    border-left: 3px solid #10b981;
     padding: 0.55rem 0.75rem;
     margin-top: 0.85rem;
-    background: rgba(167, 139, 250, 0.06);
+    background: rgba(16,185,129,0.06);
     border-radius: 0 0.5rem 0.5rem 0;
     line-height: 1.45;
   }
 
-  /* Form polish */
   div[data-testid="stForm"] {
-    background: linear-gradient(160deg, rgba(28, 22, 48, 0.85) 0%, rgba(18, 16, 32, 0.92) 100%);
-    border: 1px solid rgba(167, 139, 250, 0.22);
-    border-radius: 1rem;
+    background: linear-gradient(160deg, rgba(10,40,56,0.92) 0%, rgba(4,18,28,0.96) 100%);
+    border: 1px solid rgba(16,185,129,0.22);
+    border-radius: 16px;
     padding: 1rem 1rem 0.85rem;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
-  }
-  div[data-testid="stForm"] .stButton > button {
-    margin-top: 0.35rem;
-    font-weight: 650;
-    border-radius: 0.65rem;
-    min-height: 2.75rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.28);
   }
 
-  /* Tabs */
+  /* Primary buttons */
+  .stButton > button, div[data-testid="stForm"] .stButton > button {
+    background: linear-gradient(90deg, #10b981, #059669) !important;
+    color: #041018 !important;
+    border: none !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    min-height: 2.85rem !important;
+    box-shadow: 0 6px 18px rgba(16,185,129,0.28) !important;
+  }
+  .stButton > button:hover {
+    filter: brightness(1.06);
+  }
+
+  /* Tabs — scrollable on mobile */
   .stTabs [data-baseweb="tab-list"] {
-    gap: 0.35rem;
-    background: rgba(22, 18, 42, 0.65);
-    border-radius: 0.75rem;
+    gap: 0.3rem;
+    background: rgba(4, 18, 28, 0.75);
+    border-radius: 12px;
     padding: 0.3rem;
-    border: 1px solid rgba(167, 139, 250, 0.18);
+    border: 1px solid rgba(16,185,129,0.2);
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
   }
   .stTabs [data-baseweb="tab"] {
-    border-radius: 0.55rem;
-    padding: 0.55rem 0.9rem;
-    color: #a8a3b8;
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    color: #8fb9a8;
+    white-space: nowrap;
+    font-weight: 600;
+    min-height: 2.5rem;
   }
   .stTabs [aria-selected="true"] {
-    background: rgba(167, 139, 250, 0.2) !important;
-    color: #f1eef8 !important;
+    background: linear-gradient(90deg, rgba(16,185,129,0.35), rgba(5,150,105,0.22)) !important;
+    color: #ecfdf5 !important;
   }
 
-  /* Mobile */
+  /* Inputs readable on dark */
+  .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] > div {
+    border-radius: 10px !important;
+  }
+
+  /* Dataframes */
+  div[data-testid="stDataFrame"] {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(16,185,129,0.18);
+  }
+
+  /* Expanders */
+  div[data-testid="stExpander"] {
+    background: rgba(4, 18, 28, 0.55);
+    border: 1px solid rgba(16,185,129,0.16);
+    border-radius: 12px;
+  }
+
+  /* Mobile-first tweaks */
   @media (max-width: 640px) {
     .block-container {
-      padding-left: 0.85rem;
-      padding-right: 0.85rem;
-      padding-top: 0.85rem;
+      padding-left: 0.7rem !important;
+      padding-right: 0.7rem !important;
+      padding-top: 0.65rem !important;
+      max-width: 100%;
     }
-    .ui-card, div[data-testid="stForm"] {
-      padding: 0.9rem 0.8rem;
-      border-radius: 0.85rem;
+    .hero {
+      padding: 1.05rem 0.95rem 1rem;
+      border-radius: 14px;
     }
-    .angle-chip { min-width: 100%; }
-    .sun-hero { padding: 1.25rem 0.85rem 1.15rem; }
+    .hero h1 { font-size: clamp(1.28rem, 7vw, 1.55rem); }
+    div[data-testid="stForm"] {
+      padding: 0.85rem 0.75rem;
+      border-radius: 14px;
+    }
+    .angle-chip { min-width: 100%; flex: 1 1 100%; }
+    .sun-hero { padding: 1.15rem 0.75rem 1.05rem; border-radius: 14px; }
+    .stTabs [data-baseweb="tab"] {
+      padding: 0.55rem 0.7rem;
+      font-size: 0.88rem;
+    }
+    /* Stack twin columns more comfortably on narrow phones */
+    [data-testid="stHorizontalBlock"] {
+      gap: 0.35rem !important;
+    }
+    .stButton > button, div[data-testid="stForm"] .stButton > button {
+      min-height: 3rem !important;
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .stTabs [data-baseweb="tab"] { padding: 0.5rem 0.55rem; font-size: 0.82rem; }
   }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-# --- Header -------------------------------------------------------------------
+# --- Header ------------------------------------------------------------------- -------------------------------------------------------------------
 st.markdown(
     """
-<div class="app-header">
-  <p class="app-kicker">Astrology · Ελληνικά</p>
-  <h1 class="app-title">Αστρολογικός χάρτης</h1>
-  <p class="app-sub">
-    Ζώδιο, ημερήσια πρόβλεψη, γενέθλιος χάρτης και ανάλυση προσωπικότητας —
-    χωρίς επί πληρωμή APIs.
+<div class="hero">
+  <div class="ui-version-badge">UI v5 · Electric Midnight · Mobile</div>
+  <span class="hero-kicker">Astrology · Ελληνικά</span>
+  <h1>Αστρολογικός χάρτης</h1>
+  <p>
+    Ζώδιο, κινεζικό ωροσκόπιο, γενέθλιος χάρτης, προσωπικότητα και προβλέψεις
+    επόμενων μηνών — με προαιρετικό Gemini / xAI.
   </p>
 </div>
 """,
     unsafe_allow_html=True,
 )
-
-st.markdown("")  # breathing room
 
 # --- Birth form ---------------------------------------------------------------
 st.markdown(
