@@ -1,0 +1,6 @@
+Astrology MVP — AI + Chinese + monthly outlook
+1) Upload ALL files to repo root (astrology-mvp), overwrite.
+2) Streamlit Secrets:
+   GEMINI_API_KEY = "..."
+   XAI_API_KEY = "..."
+3) Reboot app. New tabs: Κινεζικό, Προβλέψεις (ημερήσια + επόμενοι μήνες).

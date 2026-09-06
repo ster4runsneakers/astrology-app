@@ -10,7 +10,10 @@ import pandas as pd
 import streamlit as st
 
 from chart_viz import build_chart_figure, chart_table_rows, houses_table_rows
+from ai_enrich import enrich_monthly_outlook, enrich_personality, keys_status
+from chinese_zodiac import get_chinese_zodiac
 from horoscope import get_daily_horoscope
+from monthly_outlook import build_monthly_outlook
 from natal import (
     BirthProfile,
     compute_natal_chart,
@@ -472,9 +475,38 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Tabs: Chart | Personality | Forecast
-tab_chart, tab_pers, tab_fore = st.tabs(
-    ["Χάρτης", "Προσωπικότητα", "Πρόβλεψη"]
+# API keys status (secrets)
+_ks = keys_status()
+with st.expander("🔑 AI κλειδιά (Gemini / xAI)", expanded=False):
+    st.caption(
+        "Πρόσθεσε στο Streamlit **Secrets** ή σε `.streamlit/secrets.toml`: "
+        "`GEMINI_API_KEY` και/ή `XAI_API_KEY`. Χωρίς κλειδιά δουλεύει η τοπική ανάλυση."
+    )
+    c1, c2 = st.columns(2)
+    c1.write("✅ Gemini" if _ks["gemini"] else "⬜ Gemini — λείπει")
+    c2.write("✅ xAI / Grok" if _ks["xai"] else "⬜ xAI — λείπει")
+    ai_provider = st.selectbox(
+        "Πάροχος AI enrichment",
+        ["auto", "gemini", "xai", "off"],
+        format_func=lambda x: {
+            "auto": "Αυτόματα (Gemini → xAI)",
+            "gemini": "Μόνο Gemini",
+            "xai": "Μόνο xAI Grok",
+            "off": "Απενεργοποιημένο (μόνο τοπικά)",
+        }[x],
+        help="Το AI εμπλουτίζει προσωπικότητα + μηνιαίες προβλέψεις· δεν αλλάζει τον χάρτη.",
+    )
+
+# Chinese zodiac from DOB
+try:
+    _dob = date.fromisoformat(profile.date_of_birth)
+except Exception:
+    _dob = date.today()
+chinese = get_chinese_zodiac(_dob)
+
+# Tabs
+tab_chart, tab_pers, tab_cn, tab_fore = st.tabs(
+    ["Χάρτης", "Προσωπικότητα", "Κινεζικό", "Προβλέψεις"]
 )
 
 # ===== Χάρτης ================================================================
@@ -573,10 +605,54 @@ with tab_pers:
             f'<p class="disclaimer">{analysis.disclaimer_el}</p>',
             unsafe_allow_html=True,
         )
+
+        if ai_provider != "off" and (_ks["gemini"] or _ks["xai"]):
+            if st.button("✨ AI εμπλουτισμός προσωπικότητας", use_container_width=True):
+                with st.spinner("AI ανάλυση…"):
+                    text, src, err = enrich_personality(
+                        analysis, chart, profile, provider=ai_provider
+                    )
+                    st.session_state["ai_personality"] = {
+                        "text": text,
+                        "source": src,
+                        "error": err,
+                    }
+            if st.session_state.get("ai_personality"):
+                ap = st.session_state["ai_personality"]
+                st.markdown("#### AI ανάλυση")
+                st.caption(f"Πηγή: `{ap['source']}`")
+                st.markdown(ap["text"])
+                if ap.get("error") and ap["source"] == "local":
+                    st.warning(f"AI fallback: {ap['error']}")
+        elif ai_provider != "off":
+            st.info("Για AI enrichment πρόσθεσε `GEMINI_API_KEY` ή `XAI_API_KEY` στα Secrets.")
     except Exception as exc:  # noqa: BLE001
         st.warning(f"Δεν ήταν δυνατή η ανάλυση προσωπικότητας: {exc}")
 
-# ===== Πρόβλεψη ==============================================================
+# ===== Κινεζικό ==============================================================
+with tab_cn:
+    st.markdown(
+        '<p class="ui-card-title">Κινεζικό ωροσκόπιο</p>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"""
+<div class="sun-hero">
+  <div class="sym">{chinese.symbol}</div>
+  <div class="name">{chinese.animal_el}</div>
+  <div class="meta">{chinese.element_el} · {chinese.polarity} · έτος {chinese.lunar_year}</div>
+  <div class="label">Κινεζικό ζώδιο</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    st.markdown(chinese.summary_el)
+    st.caption(
+        "Υπολογισμός με βάση την κινεζική πρωτοχρονιά (πίνακας ετών). "
+        "Ενδεικτικό / ψυχαγωγικό MVP."
+    )
+
+# ===== Προβλέψεις ============================================================
 with tab_fore:
     st.markdown(
         f'<p class="ui-card-title">Ημερήσια πρόβλεψη {horoscope.symbol}</p>',
@@ -586,6 +662,39 @@ with tab_fore:
     st.write(horoscope.text)
     st.markdown(
         f'<p class="disclaimer">{horoscope.disclaimer_el}</p>',
+        unsafe_allow_html=True,
+    )
+
+    st.divider()
+    st.markdown(
+        '<p class="ui-card-title">Επόμενοι μήνες</p>',
+        unsafe_allow_html=True,
+    )
+    n_months = st.slider("Πόσοι μήνες", 3, 6, 6)
+    outlook = build_monthly_outlook(sun.id, chinese, start=date.today(), months=n_months)
+
+    if ai_provider != "off" and (_ks["gemini"] or _ks["xai"]):
+        if st.button("✨ AI μηνιαίες προβλέψεις", use_container_width=True, key="ai_months_btn"):
+            with st.spinner("AI μηνιαίο outlook…"):
+                outlook2, err = enrich_monthly_outlook(
+                    sun.id, chinese, outlook, profile, provider=ai_provider
+                )
+                st.session_state["ai_outlook"] = {"outlook": outlook2, "error": err}
+        if st.session_state.get("ai_outlook"):
+            outlook = st.session_state["ai_outlook"]["outlook"]
+            if st.session_state["ai_outlook"].get("error") and outlook.source == "local":
+                st.warning(f"AI fallback: {st.session_state['ai_outlook']['error']}")
+
+    st.caption(f"Πηγή: `{outlook.source}`")
+    if outlook.chinese_note_el:
+        st.info(outlook.chinese_note_el)
+
+    for card in outlook.months:
+        with st.expander(f"{card.label_el} · {card.theme_el}", expanded=False):
+            st.markdown(card.text_el)
+
+    st.markdown(
+        f'<p class="disclaimer">{outlook.disclaimer_el}</p>',
         unsafe_allow_html=True,
     )
 
