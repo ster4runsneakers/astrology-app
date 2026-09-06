@@ -7,6 +7,7 @@ from typing import Optional
 from natal import BirthProfile, NatalChart, PlanetPosition
 from narrative_el import build_rich_summary
 from voice_el import VOICE_DISCLAIMER_EL, warm_wrap
+from greek_grammar import ACCUSATIVE, PLURAL, FEMININE
 from zodiac import ZodiacSignId, get_zodiac_by_id
 
 DISCLAIMER_EL = (
@@ -296,18 +297,14 @@ ELEMENT_EL = {
 }
 
 def _sign_phrase(sign_id: ZodiacSignId) -> str:
-    """Greek 'στον/στην/στους X' for readable narrative."""
-    z = get_zodiac_by_id(sign_id)
-    # Masculine: Κριός, Ταύρος, Καρκίνος, Λέων, Ζυγός, Σκορπιός, Τοξότης, Αιγόκερως, Υδροχόος
-    # Feminine: Παρθένος
-    # Plural: Δίδυμοι, Ιχθύες
-    feminine = {"virgo"}
-    plural = {"gemini", "pisces"}
-    if sign_id in plural:
-        return f"στους **{z.name_el}**"
-    if sign_id in feminine:
-        return f"στην **{z.name_el}**"
-    return f"στον **{z.name_el}**"
+    """Greek 'στον/στην/στους X' with correct accusative."""
+    acc = ACCUSATIVE[sign_id]
+    if sign_id in PLURAL:
+        return f"στους **{acc}**"
+    if sign_id in FEMININE:
+        return f"στην **{acc}**"
+    return f"στον **{acc}**"
+
 
 
 # Pairwise sun–moon narrative seeds (element combos)
