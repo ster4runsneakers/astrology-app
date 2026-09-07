@@ -175,12 +175,13 @@ def build_monthly_outlook(
         season = SEASON_HINT.get(m, "μεταβατική ενέργεια")
 
         text = (
-            f"{opener} **{z.name_el}**.\n\n"
-            f"{flavor}, ο **{MONTHS_EL[m]} {y}** έχει αέρα «{season}». "
-            f"Κύριο θέμα: **{theme}**. Η προσοχή σου πέφτει φυσικά {attention}.\n\n"
-            f"**Πρακτικά:** {practical}\n\n"
-            f"**{example}**\n\n"
-            f"**Συμβουλή μήνα:** {closer}"
+            f"### {MONTHS_EL[m]} {y}\n"
+            f"**Θέμα:** {theme}\n\n"
+            f"Για σένα ({z.name_el}): η προσοχή πέφτει {attention}. "
+            f"{flavor} — {season}.\n\n"
+            f"**Τι να κάνεις:** {practical}\n\n"
+            f"{example}\n\n"
+            f"**Θυμήσου:** {closer}"
         )
         cards.append(
             MonthCard(
